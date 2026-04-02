@@ -14,7 +14,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class LocationService implements com.example.Uber.services.interfaces.LocationService {
+public class RedisLocationService implements com.example.Uber.services.interfaces.LocationService {
     @Value("${redis.geo.ops.key}")
     private String driverGeoOpsKey;
 
