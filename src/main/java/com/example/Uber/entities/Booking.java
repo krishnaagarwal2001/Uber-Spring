@@ -26,9 +26,11 @@ public class Booking extends BaseEntity {
     private Driver driver;
 
     @Column(nullable = false)
-    private String pickupLocation;
+    private Double pickupLocationLatitude;
 
     @Column(nullable = false)
+    private Double pickupLocationLongitude;
+
     private String dropoffLocation;
 
     @Enumerated(EnumType.STRING)

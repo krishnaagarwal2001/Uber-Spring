@@ -14,7 +14,8 @@ public class BookingAdapter {
         return Booking.builder()
                 .passenger(passenger)
                 .driver(driver)
-                .pickupLocation(bookingRequest.getPickupLocation())
+                .pickupLocationLatitude(bookingRequest.getPickupLocationLatitude())
+                .pickupLocationLongitude(bookingRequest.getPickupLocationLongitude())
                 .dropoffLocation(bookingRequest.getDropoffLocation())
                 .status(bookingStatus)
                 .fare(bookingRequest.getFare())
@@ -29,7 +30,8 @@ public class BookingAdapter {
                 .passengerName(booking.getPassenger().getName())
                 .driverId(booking.getDriver().getId())
                 .driverName(booking.getDriver().getName())
-                .pickupLocation(booking.getPickupLocation())
+                .pickupLocationLatitude(booking.getPickupLocationLatitude())
+                .pickupLocationLongitude(booking.getPickupLocationLongitude())
                 .dropoffLocation(booking.getDropoffLocation())
                 .fare(booking.getFare())
                 .scheduledPickupTime(booking.getScheduledPickupTime())
@@ -44,7 +46,8 @@ public class BookingAdapter {
     public static void updateEntity(BookingRequest request, Booking booking, Passenger passenger, Driver driver){
         booking.setPassenger(passenger);
         booking.setDriver(driver);
-        booking.setPickupLocation(request.getPickupLocation());
+        booking.setPickupLocationLatitude(request.getPickupLocationLatitude());
+        booking.setPickupLocationLongitude(request.getPickupLocationLongitude());
         booking.setDropoffLocation(request.getDropoffLocation());
         booking.setFare(request.getFare());
         booking.setScheduledPickupTime(request.getScheduledPickupTime());
