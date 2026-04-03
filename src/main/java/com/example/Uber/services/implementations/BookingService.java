@@ -13,7 +13,13 @@ import com.example.Uber.repositories.BookingRepository;
 import com.example.Uber.repositories.DriverRepository;
 import com.example.Uber.repositories.PassengerRepository;
 import com.example.Uber.services.interfaces.LocationService;
+
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
+
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +32,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Slf4j
 public class BookingService implements com.example.Uber.services.interfaces.booking.BookingService {
 
     private final BookingRepository bookingRepository;
@@ -218,4 +225,47 @@ public class BookingService implements com.example.Uber.services.interfaces.book
 
         bookingRepository.deleteById(id);
     }
+
+    @Override
+    public Boolean acceptRide(Long driverId, Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> Status.NOT_FOUND
+                        .withDescription("Booking not found with id: " + bookingId)
+                        .asRuntimeException());
+
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw Status.FAILED_PRECONDITION
+                    .withDescription("Booking is not available for acceptance")
+                    .asRuntimeException();
+        }
+
+        if (booking.getDriver() != null) {
+            throw Status.FAILED_PRECONDITION
+                    .withDescription("Driver is already assigned for this booking")
+                    .asRuntimeException();
+        }
+
+        Driver driver = driverRepository.findById(driverId)
+                .orElseThrow(() -> Status.NOT_FOUND
+                        .withDescription("Driver not found with id: " + driverId)
+                        .asRuntimeException());
+
+        if (!driver.getIsAvailable()) {
+            throw Status.FAILED_PRECONDITION
+                    .withDescription("Driver is not available")
+                    .asRuntimeException();
+        }
+
+        driver.setIsAvailable(false);
+        booking.setStatus(BookingStatus.CONFIRMED);
+        booking.setDriver(driver);
+
+        driverRepository.save(driver);
+        bookingRepository.save(booking);
+
+        log.info("Driver {} accepted booking {}", driverId, bookingId);
+
+        return true;
+    }
+
 }
