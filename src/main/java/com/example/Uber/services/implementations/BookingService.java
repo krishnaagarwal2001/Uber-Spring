@@ -1,8 +1,10 @@
 package com.example.Uber.services.implementations;
 
 import com.example.Uber.adapters.BookingAdapter;
+import com.example.Uber.client.GrpcClient;
 import com.example.Uber.dtos.BookingRequest;
 import com.example.Uber.dtos.BookingResponse;
+import com.example.Uber.dtos.DriverLocationDTO;
 import com.example.Uber.entities.Booking;
 import com.example.Uber.entities.Driver;
 import com.example.Uber.entities.Passenger;
@@ -10,10 +12,12 @@ import com.example.Uber.enums.BookingStatus;
 import com.example.Uber.repositories.BookingRepository;
 import com.example.Uber.repositories.DriverRepository;
 import com.example.Uber.repositories.PassengerRepository;
+import com.example.Uber.services.interfaces.LocationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -27,6 +31,9 @@ public class BookingService implements com.example.Uber.services.interfaces.book
     private final BookingRepository bookingRepository;
     private final DriverRepository driverRepository;
     private final PassengerRepository passengerRepository;
+    private final LocationService locationService;
+
+    private final GrpcClient grpcClient;
 
     @Override
     @Transactional(readOnly = true)
@@ -68,28 +75,60 @@ public class BookingService implements com.example.Uber.services.interfaces.book
     @Override
     public BookingResponse create(BookingRequest bookingRequest) {
         Passenger passenger = passengerRepository.findById(bookingRequest.getPassengerId())
-                .orElseThrow(() -> new IllegalArgumentException("Passenger not found with id: " + bookingRequest.getPassengerId()));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Passenger not found with id: " + bookingRequest.getPassengerId()));
 
         Driver driver = null;
+        BookingStatus status = BookingStatus.PENDING;
 
         if (bookingRequest.getDriverId() != null) {
-            driver = driverRepository.findById(bookingRequest.getDriverId())
-                    .orElseThrow(() -> new IllegalArgumentException("Driver not found with id: " + bookingRequest.getDriverId()));
+            driver = driverRepository.findById(bookingRequest.getDriverId()).orElseThrow(
+                    () -> new IllegalArgumentException("Driver not found with id: " + bookingRequest.getDriverId()));
 
             if (!driver.getIsAvailable()) {
-                throw new IllegalArgumentException("Driver with id " + bookingRequest.getDriverId() + " is not available");
+                throw new IllegalStateException("Driver with id " + bookingRequest.getDriverId() + " is not available");
             }
-        }
 
-        Booking booking = BookingAdapter.bookingRequestToBooking(bookingRequest, passenger, driver);
-
-        // If driver is assigned, mark as unavailable
-        if (driver != null) {
             driver.setIsAvailable(false);
             driverRepository.save(driver);
+            status = BookingStatus.CONFIRMED;
         }
 
+        if (bookingRequest.getPickupLocationLatitude() == null || bookingRequest.getPickupLocationLongitude() == null) {
+            throw new IllegalArgumentException("Pickup location latitude and longitude are required");
+        }
+
+        BigDecimal fare = bookingRequest.getFare();
+
+        if (fare == null) {
+            fare = BigDecimal.ZERO; // we can create a microservice for fare calculation
+        }
+
+        Booking booking = Booking.builder()
+                .passenger(passenger)
+                .pickupLocationLatitude(bookingRequest.getPickupLocationLatitude())
+                .pickupLocationLongitude(bookingRequest.getPickupLocationLongitude())
+                .status(status)
+                .driver(driver)
+                .fare(fare)
+                .dropoffLocation(bookingRequest.getDropoffLocation())
+                .scheduledPickupTime(bookingRequest.getScheduledPickupTime())
+                .build();
+
         Booking savedBooking = bookingRepository.save(booking);
+
+        List<DriverLocationDTO> nearByDrivers = locationService.getNearbyDrivers(
+                bookingRequest.getPickupLocationLatitude(),
+                bookingRequest.getPickupLocationLongitude(),
+                10.0);
+
+        List<Long> driverIds = nearByDrivers.stream().map(DriverLocationDTO::getDriverId).collect(Collectors.toList());
+
+        Long bookingId = savedBooking.getId();
+
+        grpcClient.notifyDriversForNewRide(bookingRequest.getPickupLocationLatitude(),
+                bookingRequest.getPickupLocationLongitude(), bookingId, driverIds);
+
         return BookingAdapter.bookingToBookingResponse(savedBooking);
     }
 
@@ -99,13 +138,15 @@ public class BookingService implements com.example.Uber.services.interfaces.book
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found with id: " + id));
 
         Passenger passenger = passengerRepository.findById(bookingRequest.getPassengerId())
-                .orElseThrow(() -> new IllegalArgumentException("Passenger not found with id: " + bookingRequest.getPassengerId()));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Passenger not found with id: " + bookingRequest.getPassengerId()));
 
         Driver driver = null;
 
         if (bookingRequest.getDriverId() != null) {
             driver = driverRepository.findById(bookingRequest.getDriverId())
-                    .orElseThrow(() -> new IllegalArgumentException("Driver not found with id: " + bookingRequest.getDriverId()));
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Driver not found with id: " + bookingRequest.getDriverId()));
         }
 
         // Handle driver availability when updating
@@ -118,7 +159,8 @@ public class BookingService implements com.example.Uber.services.interfaces.book
 
         if (driver != null && !driver.equals(previousDriver)) {
             if (!driver.getIsAvailable()) {
-                throw new IllegalArgumentException("Driver with id " + bookingRequest.getDriverId() + " is not available");
+                throw new IllegalArgumentException(
+                        "Driver with id " + bookingRequest.getDriverId() + " is not available");
             }
 
             driver.setIsAvailable(false);
