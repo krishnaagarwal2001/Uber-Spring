@@ -21,11 +21,11 @@ public class RedisLocationService implements com.example.Uber.services.interface
     private final StringRedisTemplate stringRedisTemplate;
 
     @Override
-    public Boolean saveDriverLocation(String driverId, Double latitude, Double longitude) {
+    public Boolean saveDriverLocation(Long driverId, Double latitude, Double longitude) {
         GeoOperations<String, String> geoOperations = stringRedisTemplate.opsForGeo();
 
         geoOperations.add(driverGeoOpsKey,
-                new RedisGeoCommands.GeoLocation<>(driverId, new Point(latitude, longitude))
+                new RedisGeoCommands.GeoLocation<>(driverId.toString(), new Point(latitude, longitude))
         );
 
         return true;
@@ -47,7 +47,7 @@ public class RedisLocationService implements com.example.Uber.services.interface
             Point point = geoOperations.position(driverGeoOpsKey, result.getContent().getName()).get(0);
 
             DriverLocationDTO driverLocation = DriverLocationDTO.builder()
-                    .driverId(result.getContent().getName())
+                    .driverId(Long.parseLong(result.getContent().getName()))
                     .latitude(point.getY())
                     .longitude(point.getX())
                     .build();
