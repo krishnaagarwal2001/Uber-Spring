@@ -3,6 +3,7 @@ package com.example.Uber.controllers;
 import com.example.Uber.dtos.DriverLocationDTO;
 import com.example.Uber.dtos.NearbyDriversRequestDTO;
 import com.example.Uber.services.interfaces.LocationService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,7 +20,7 @@ public class LocationController {
     private final LocationService locationService;
 
     @PostMapping("/driverLocation")
-    public ResponseEntity<Boolean> saveDriverLocation(@RequestBody DriverLocationDTO driverLocation) {
+    public ResponseEntity<Boolean> saveDriverLocation(@Valid @RequestBody DriverLocationDTO driverLocation) {
         Boolean saved = locationService.saveDriverLocation(driverLocation.getDriverId(),
                 driverLocation.getLatitude(),
                 driverLocation.getLongitude());
@@ -27,7 +28,7 @@ public class LocationController {
     }
 
     @PostMapping("/nearbyDrivers")
-    public ResponseEntity<List<DriverLocationDTO>> getNearbyDrivers(@RequestBody NearbyDriversRequestDTO request) {
+    public ResponseEntity<List<DriverLocationDTO>> getNearbyDrivers(@Valid @RequestBody NearbyDriversRequestDTO request) {
         List<DriverLocationDTO> nearbyDrivers = locationService.getNearbyDrivers(request.getLatitude(),
                 request.getLongitude(),
                 request.getRadius());
