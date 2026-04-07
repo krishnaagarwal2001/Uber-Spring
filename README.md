@@ -55,7 +55,7 @@ This README documents the **complete Uber ride-hailing platform** consisting of 
 - **Language:** Java 21 + Spring Boot
 - **Key Components:** Controllers, Services, Repositories, gRPC Server
 - **Persistence:** MySQL + Redis
-- **Ports:** 3000 (REST), 9090 (gRPC)
+- **Ports:** 8080 (REST), 9090 (gRPC)
 
 ### Repository 2: uber-socket (External)
 - **Location:** [github.com/krishnaagarwal2001/uber-socket](https://github.com/krishnaagarwal2001/uber-socket)
@@ -694,7 +694,7 @@ Both services use environment variables for all external connections and sensiti
 - `GRPC_SERVER_PORT` - Port for gRPC server (default: `9090`)
 - `GRPC_CLIENT_HOST` - Host of `uber-socket` gRPC service (default: `localhost`)
 - `GRPC_CLIENT_PORT` - Port of `uber-socket` gRPC service (default: `9091`)
-- `SERVER_PORT` - HTTP REST server port (default: `3000`)
+- `SERVER_PORT` - HTTP REST server port (default: `8080`)
 
 ### uber-socket Environment Variables
 
@@ -715,7 +715,7 @@ DATA_SOURCE_USER_NAME=root
 DATA_SOURCE_USER_PASSWORD=
 
 # Server Configuration
-SERVER_PORT=3000
+SERVER_PORT=8080
 
 # Redis Configuration
 REDIS_HOST=localhost
@@ -826,7 +826,7 @@ gRPC services ready on port 9091
 
 1. **Health Check - Uber-Spring REST API:**
    ```bash
-   curl http://localhost:3000/api/v1/drivers
+   curl http://localhost:8080/api/v1/drivers
    ```
 
 2. **Health Check - uber-socket WebSocket:**
