@@ -42,6 +42,7 @@ Start with [Project Structure](#project-structure) → [System Architecture](#sy
 - [Environment & Configuration](#environment--configuration) — Configuration details
 - [Service Startup Order](#service-startup-order) — Startup sequence
 - [Running the Complete System](#running-the-complete-system) — Getting started (setup & startup)
+- [Video Demo](#video-demo) - Booking video demo
 - [Future Enhancements](#future-enhancements) — Planned improvements
 - [System Design Notes](#system-design-notes) — Additional implementation notes
 
@@ -840,13 +841,11 @@ gRPC services ready on port 9091
 - `./gradlew bootRun` - start Spring Boot application
 - `./gradlew test` - run tests (disabled in build config by default)
 
-## Future Enhancements
+## Video Demo
 
-For proper operation, start services in this order:
+### Booking Video Demo
 
-1. **MySQL** and **Redis** (infrastructure)
-2. **Uber-Spring** (backend API and gRPC server)
-3. **uber-socket** (real-time service and gRPC client)
+
 
 ## Future Enhancements
 
