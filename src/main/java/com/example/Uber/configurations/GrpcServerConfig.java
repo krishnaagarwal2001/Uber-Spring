@@ -10,7 +10,7 @@ import io.grpc.Server;
 
 import java.io.IOException;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 
 @Configuration
 @RequiredArgsConstructor
