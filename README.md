@@ -27,7 +27,7 @@ The two services communicate via gRPC for booking confirmations and ride matchin
 
 ## Quick Navigation
 
-Start with [Project Structure](#project-structure) → [System Architecture](#system-architecture) for understanding the system design. Then jump to [Running the Complete System](#running-the-complete-system) to get started, followed by [API Documentation](#api-documentation) for usage details.
+Start with [Project Structure](#project-structure) → [System Architecture](#system-architecture) for understanding the system design. Then jump to [Running the Complete System](#running-the-complete-system) to get started, followed by [API Documentation](#api-documentation) and [WebSocket API Documentation](#websocket-api-documentation) for integration details.
 
 - [Project Structure](#project-structure) — Understand the two-service architecture
 - [Key Features & Capabilities](#key-features--capabilities) — Core features and technical capabilities
@@ -37,6 +37,7 @@ Start with [Project Structure](#project-structure) → [System Architecture](#sy
 - [Design Decisions & Rationale](#design-decisions-and-rationale) — Design decisions
 - [gRPC Communication Contract](#grpc-communication-contract) — Inter-service contracts
 - [API Documentation](#api-documentation) — Endpoint reference
+- [WebSocket API Documentation](#websocket-api-documentation) — Real-time communication
 - [Code Flow](#code-flow) — Trace through key flows
 - [Environment & Configuration](#environment--configuration) — Configuration details
 - [Service Startup Order](#service-startup-order) — Startup sequence
@@ -562,6 +563,99 @@ Example request:
   "radius": 10.0
 }
 ```
+
+## WebSocket API Documentation
+
+### uber-socket Real-Time Communication
+
+**Repository:** [github.com/krishnaagarwal2001/uber-socket](https://github.com/krishnaagarwal2001/uber-socket)
+
+The uber-socket service provides WebSocket API endpoints for real-time communication between drivers, passengers, and the ride-hailing system using STOMP over WebSocket protocol.
+
+#### Connection Details
+
+- **Protocol:** STOMP over WebSocket
+- **Endpoint:** `ws://localhost:8082/ws-uber`
+- **Fallback:** SockJS enabled for browser compatibility
+- **Authentication:** None (future enhancement)
+
+#### Message Destinations
+
+##### Server → Client Messages (Subscriptions)
+
+**Ride Notifications to Drivers:**
+- **Destination:** `/topic/new-ride/{driverId}`
+- **Purpose:** Notify driver of new ride request
+- **Payload:**
+```json
+{
+  "pickupLocationLatitude": 28.7041,
+  "pickupLocationLongitude": 77.1025,
+  "bookingId": 123
+}
+```
+
+##### Client → Server Messages (Send)
+
+**Ride Acceptance from Driver:**
+- **Destination:** `/app/ride-acceptance`
+- **Purpose:** Driver accepts a ride request
+- **Payload:**
+```json
+{
+  "driverId": 789,
+  "bookingId": 123
+}
+```
+
+#### Client Integration Example
+
+**JavaScript Client:**
+```javascript
+// Connect to WebSocket
+var socket = new SockJS('/ws-uber');
+var stompClient = Stomp.over(socket);
+
+// Establish connection
+stompClient.connect({}, function(frame) {
+    console.log('Connected to uber-socket');
+
+    // Subscribe to ride notifications
+    stompClient.subscribe('/topic/new-ride/' + driverId, function(message) {
+        var rideData = JSON.parse(message.body);
+        console.log('New ride request:', rideData);
+
+        // Handle ride notification (show to driver)
+        showRideNotification(rideData);
+    });
+});
+
+// Accept ride function
+function acceptRide(driverId, bookingId) {
+    stompClient.send('/app/ride-acceptance', {}, JSON.stringify({
+        driverId: driverId,
+        bookingId: bookingId
+    }));
+}
+
+// Handle connection errors
+stompClient.onStompError = function(frame) {
+    console.error('WebSocket error:', frame);
+};
+```
+
+#### Message Flow
+
+1. **Driver Connection:** Driver app connects to `/ws-uber` and subscribes to `/topic/new-ride/{driverId}`
+2. **Ride Request:** When passenger books ride, server sends notification to driver's subscribed topic
+3. **Ride Acceptance:** Driver sends acceptance message to `/app/ride-acceptance`
+4. **Confirmation:** Server processes acceptance and may send confirmation messages
+
+#### Error Handling
+
+- **Connection Failures:** Implement reconnection logic with exponential backoff
+- **Message Errors:** Handle invalid payloads gracefully
+- **Network Issues:** WebSocket will automatically attempt reconnection
 
 ## Code Flow
 
